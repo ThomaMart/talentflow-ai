@@ -1,0 +1,17 @@
+{
+    "name": "thomamart/talentflow-ai",
+    "description": "AI-powered recruitment platform for WordPress",
+    "type": "wordpress-plugin",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Thomas Martin"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "TalentFlow\\": "src/"
+        }
+    },
+    "require": {}
+}

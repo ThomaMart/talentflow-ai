@@ -1,0 +1,55 @@
+services:
+  db:
+    image: mariadb:11
+    container_name: talentflow-db
+    restart: unless-stopped
+
+    environment:
+      MYSQL_DATABASE: talentflow
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+      MYSQL_ROOT_PASSWORD: root
+
+    volumes:
+      - db_data:/var/lib/mysql
+
+    ports:
+      - "3306:3306"
+
+  wordpress:
+    image: wordpress:php8.3-apache
+    container_name: talentflow-wordpress
+    restart: unless-stopped
+
+    depends_on:
+      - db
+
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_DB_NAME: talentflow
+
+    ports:
+      - "8080:80"
+
+    volumes:
+      - ./wordpress/plugins:/var/www/html/wp-content/plugins
+      - ./wordpress/themes:/var/www/html/wp-content/themes
+
+  api:
+    build:
+      context: ./api
+
+    container_name: talentflow-api
+
+    restart: unless-stopped
+
+    ports:
+      - "8000:8000"
+
+    volumes:
+      - ./api:/app
+
+volumes:
+  db_data:

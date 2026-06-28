@@ -5,7 +5,6 @@ namespace TalentFlow\Api;
 class Client
 {
     private string $baseUrl;
-    private int $timeout;
 
     public function __construct()
     {
@@ -13,46 +12,16 @@ class Client
             get_option('talentflow_api_url', 'http://api:8000'),
             '/'
         );
-
-        $this->timeout = (int) get_option('talentflow_timeout', 5);
     }
 
     public function health(): array
     {
-        return $this->request('GET', '/health');
-    }
-
-    public function analyzeCV(): array
-    {
-        return $this->request('POST', '/cv/analyze');
-    }
-
-    private function request(string $method, string $endpoint): array
-    {
-        $response = wp_remote_request(
-            $this->baseUrl . $endpoint,
-            [
-                'method'  => $method,
-                'timeout' => $this->timeout,
-                'headers' => [
-                    'Accept' => 'application/json',
-                ],
-            ]
-        );
+        $response = wp_remote_get($this->baseUrl . '/health');
 
         if (is_wp_error($response)) {
             return [
                 'success' => false,
                 'message' => $response->get_error_message(),
-            ];
-        }
-
-        $statusCode = wp_remote_retrieve_response_code($response);
-
-        if ($statusCode !== 200) {
-            return [
-                'success' => false,
-                'message' => "HTTP {$statusCode}",
             ];
         }
 
@@ -62,6 +31,51 @@ class Client
                 wp_remote_retrieve_body($response),
                 true
             ),
+        ];
+    }
+
+    public function analyzeCV(string $filePath): array
+    {
+        $curl = curl_init();
+
+        curl_setopt_array($curl, [
+            CURLOPT_URL => $this->baseUrl . '/cv/analyze',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => [
+                'file' => new \CURLFile(
+                    $filePath,
+                    'application/pdf',
+                    basename($filePath)
+                )
+            ]
+        ]);
+
+        $response = curl_exec($curl);
+
+        if ($response === false) {
+
+            return [
+                'success' => false,
+                'message' => curl_error($curl)
+            ];
+        }
+
+        $status = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+
+        curl_close($curl);
+
+        if ($status !== 200) {
+
+            return [
+                'success' => false,
+                'message' => "HTTP {$status}"
+            ];
+        }
+
+        return [
+            'success' => true,
+            'body' => json_decode($response, true)
         ];
     }
 }

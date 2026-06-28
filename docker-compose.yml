@@ -45,11 +45,26 @@ services:
 
     restart: unless-stopped
 
+    depends_on:
+      - ollama
+
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+
     ports:
       - "8000:8000"
 
     volumes:
       - ./api:/app
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: talentflow-ollama
+    restart: unless-stopped
+
+    volumes:
+      - ollama_data:/root/.ollama
+
 volumes:
   db_data:
+  ollama_data:

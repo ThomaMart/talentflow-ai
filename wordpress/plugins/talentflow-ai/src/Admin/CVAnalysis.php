@@ -58,7 +58,10 @@ class CVAnalysis
                 $client = new Client();
 
                 $result = $client->analyzeCV(
-                    $_FILES['cv_file']['tmp_name']
+                    $_FILES['cv_file']['tmp_name'],
+                    sanitize_textarea_field(
+                        $_POST['job_description'] ?? ''
+                    )
                 );
             }
         }

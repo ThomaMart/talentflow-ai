@@ -16,23 +16,20 @@ class ScoreService:
         else:
             score += 5
 
-        skills = result.get("skills", {})
+        skills = result.get("skills", [])
 
-        weights = {
-            "languages": 10,
-            "frameworks": 15,
-            "devops": 15,
-            "embedded": 15,
-            "network": 10,
-            "databases": 10,
-            "ai": 15,
-            "other": 5
-        }
+        # Maximum 40 points pour les compétences
+        score += min(len(skills), 20) * 2
 
-        for category, value in weights.items():
+        # Bonus si un résumé est présent
+        if result.get("summary"):
+            score += 10
 
-            count = len(skills.get(category, []))
+        # Bonus si les coordonnées sont complètes
+        candidate = result.get("candidate", {})
 
-            score += min(count, 5) * value / 5
+        for field in ("email", "phone", "location"):
+            if candidate.get(field):
+                score += 5
 
-        return min(round(score), 100)
+        return min(score, 100)

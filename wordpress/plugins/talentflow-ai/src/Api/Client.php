@@ -34,7 +34,7 @@ class Client
         ];
     }
 
-    public function analyzeCV(string $filePath): array
+    public function analyzeCV(string $filePath, string $jobDescription = ''): array
     {
         $curl = curl_init();
 
@@ -47,7 +47,8 @@ class Client
                     $filePath,
                     'application/pdf',
                     basename($filePath)
-                )
+                ),
+                'job_description' => $jobDescription
             ]
         ]);
 

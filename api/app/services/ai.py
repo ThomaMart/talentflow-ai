@@ -2,7 +2,6 @@ import os
 
 import requests
 
-from app.services.skills import SkillClassifier
 from app.services.score import ScoreService
 from app.services.experience import ExperienceService
 
@@ -16,7 +15,11 @@ class AIService:
 
         self.model = "qwen2.5:3b"
 
-    def analyze(self, text: str) -> dict:
+    def analyze(
+    self,
+    text: str,
+    job_description: str = ""
+) -> dict:
 
         schema = {
             "type": "object",
@@ -48,7 +51,41 @@ class AIService:
                 },
                 "score": {
                     "type": "integer"
+                },
+                "compatibility": {
+                    "type": "object",
+                    "properties": {
+                        "score": {
+                            "type": "integer"
+                        },
+                        "matching_skills": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        "missing_skills": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        "strengths": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        "recommendations": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
                 }
+
+
             },
             "required": [
                 "candidate",
@@ -56,11 +93,77 @@ class AIService:
                 "experience_years",
                 "seniority",
                 "skills",
-                "score"
+                "score",
+                "compatibility"
             ]
         }
 
-        prompt = f"""
+        if job_description.strip():
+
+            prompt = f"""
+You are a senior technical recruiter specialized in IT, DevOps, Cloud and Software Engineering.
+
+Your mission is to compare a candidate's resume with a job description.
+
+Return ONLY valid JSON matching the provided schema.
+
+Rules:
+
+- Respond ONLY in French.
+- Never invent information.
+- Base your analysis ONLY on the resume and the job description.
+- Keep recommendations concise.
+- The compatibility score must be between 0 and 100.
+- Matching skills must exist in both the CV and the job description.
+- Missing skills must be required by the job description but absent from the CV.
+- Strengths must explain why the candidate matches the position.
+- Recommendations must explain how to improve compatibility.
+
+Resume:
+
+{text}
+
+------------------------------------------------------------
+
+Job Description:
+
+{job_description}
+
+------------------------------------------------------------
+
+Return a JSON object containing:
+
+candidate
+- name
+- email
+- phone
+- location
+- linkedin
+
+summary
+- A professional summary (maximum 2 sentences)
+
+experience_years
+
+seniority
+
+skills
+- Flat list of technologies only.
+
+score
+- Global resume quality score (0-100)
+
+compatibility
+- score (0-100)
+- matching_skills (array)
+- missing_skills (array)
+- strengths (array)
+- recommendations (array)
+"""
+
+        else:
+
+            prompt = f"""
 You are a senior technical recruiter specialized in software engineering, DevOps, embedded systems and telecommunications.
 
 Your task is to extract factual information from the resume.
@@ -98,19 +201,20 @@ The summary must highlight:
 
 Skills
 
-Return ONLY a flat array of technologies.
+Return ONLY a flat array of professional skills.
 
-Example:
+Include:
 
-[
-"Python",
-"Docker",
-"Linux",
-"FastAPI",
-"GitHub Actions"
-]
+- technologies
+- programming languages
+- frameworks
+- software
+- tools
+- methodologies
+- certifications
+- business skills when relevant
 
-Do NOT group skills.
+Do not group skills.
 
 Do NOT create categories.
 
@@ -122,7 +226,10 @@ Resume:
 
 {text}
 """
+    
 
+
+        
         response = requests.post(
             f"{self.host}/api/generate",
             json={
@@ -142,8 +249,8 @@ Resume:
 
         result = json.loads(ollama["response"])
 
-        result["skills"] = SkillClassifier.classify(
-            result.get("skills", [])
+        result["skills"] = sorted(
+            set(result.get("skills", []))
         )
 
         # Calcul des années d'expérience à partir du CV
@@ -151,5 +258,15 @@ Resume:
 
         # Calcul du score
         result["score"] = ScoreService.compute(result)
+        result.setdefault(
+            "compatibility",
+            {
+                "score": 0,
+                "matching_skills": [],
+                "missing_skills": [],
+                "strengths": [],
+                "recommendations": []
+            }
+        )
 
         return result

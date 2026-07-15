@@ -19,5 +19,6 @@ venv/
 
 # PDF
 *.pdf
-*.doc
-*.docx
+
+# Uploaded resumes
+api/uploads/

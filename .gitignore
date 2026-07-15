@@ -16,3 +16,8 @@ venv/
 
 # OS
 .DS_Store
+
+# PDF
+*.pdf
+*.doc
+*.docx
